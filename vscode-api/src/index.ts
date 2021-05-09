@@ -9,6 +9,8 @@ import { Strategy as GitHubStrategy } from "passport-github";
 import passport from "passport";
 import jwt from "jsonwebtoken";
 import cors from "cors";
+import { Todo } from "./entities/Todo";
+import { isAuth, ReqWithUserId } from "./isAuth";
 
 //annonymous function call itself
 const main = async () => {
@@ -16,9 +18,9 @@ const main = async () => {
     type: "postgres",
     database: "postgres",
     entities: [join(__dirname), "./entities/*.*"],
-    //  username: "anjalisoni",
+    username: "postgres",
     dropSchema: true,
-    // password: 'postgres'.
+    password: "postgres",
     logging: !__prod__,
     synchronize: !__prod__,
   });
@@ -30,8 +32,9 @@ const main = async () => {
     done(null, user.accessToken);
   });
   app.use(cors({ origin: "*" }));
-    app.use(passport.initialize());
-    
+  app.use(passport.initialize());
+  app.use(express.json());
+
   passport.use(
     new GitHubStrategy(
       {
@@ -84,6 +87,35 @@ const main = async () => {
       // res.send("you are logged in to github");
     }
   );
+ app.get("/todo", isAuth, async (req: any, res) => {
+   const todos = await Todo.find({
+     where: { creatorId: req.userId },
+     order: { id: "DESC" },
+   });
+
+   res.send({ todos });
+ });
+  /*  app.post("/todo", isAuth, async (req, res) => {
+    const todo = await Todo.create({
+      text: req.body.text,
+      creatorId: req.userId,
+    }).save();
+    res.send({ todo });
+  }); */
+app.put("/todo", isAuth, async (req:any, res) => {
+  const todo = await Todo.findOne(req.body.id);
+  if (!todo) {
+    res.send({ todo: null });
+    return;
+  }
+  if (todo.creatorId !== req.userId) {
+    throw new Error("not authorized");
+  }
+  todo.completed = !todo.completed;
+  await todo.save();
+  res.send({ todo });
+});
+
   app.get("/me", async (req, res) => {
     //Bearer nbqwjsdascsc
     const authHeader = req.headers.authorization;

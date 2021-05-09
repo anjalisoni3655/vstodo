@@ -11,6 +11,13 @@ import Todos from "./Todos.svelte";
   let text = "";
   //let user: { name: string; id: number } | null = null;
    let user: User | null = null;
+   let page :'todos'|'contact'=tsvscode.getState()?.page||'todos';
+   $:{
+     tsvscode.setState({page});
+
+   }
+
+   tsvscode
   let loading = true;
   onMount(async () => {
     window.addEventListener("message", async (event) => {
@@ -41,8 +48,22 @@ import Todos from "./Todos.svelte";
 {#if loading}
   <div>loading.....</div>
 {:else if user}
+  {#if page==='todos'}
+    <Todos {user} {accessToken}></Todos>
+      <button on:click={()=>{
+      page='contact';
+
+    }}>go to contact</button>
+    {:else}
+    <div>Contact me</div>
+    <button on:click={()=>{
+      page='todos';
+
+    }}>go back</button>
+    
+  {/if}
   <pre>{JSON.stringify(user,null,2)}</pre>
-  <Todos {user}></Todos>
+  <Todos {user} {accessToken}></Todos>
   <button on:click={()=>{
 accessToken='';
 user=null;
